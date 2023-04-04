@@ -210,15 +210,18 @@ def generate_tables_V2(sentences):
     # print(transition_probabilities[0])
     # print(" ")
 
-    # Normalize the initital probabilities
-    initial_probabilities /= num_sentences  
-
     # have this smoothing constant to avoid dividing by zero in the transition probability normalization
     smoothing_constant = 1e-10
 
+    # Normalize the initital probabilities
+    #initial_probabilities /= num_sentences  
+    initial_probabilities = (initial_probabilities + smoothing_constant) / (num_sentences + smoothing_constant * len(TAGS))
+
+
     # Normalize the transition probabilities - each row has P(next tag | curr tag) - normalize by dividing each by tag_counts(curr_tag)
     for i in range(len(transition_probabilities)):
-        transition_probabilities[i] = (transition_probabilities[i] + smoothing_constant)/ tag_counts[i]
+        #transition_probabilities[i] = (transition_probabilities[i] + smoothing_constant)/ tag_counts[i]
+        transition_probabilities[i] = (transition_probabilities[i] + smoothing_constant) / (tag_counts[i] + smoothing_constant * len(TAGS))
 
     # Normalize the observation probabilities
     for i in range(len(observation_probabilities)):
@@ -243,91 +246,6 @@ def generate_tables_V2(sentences):
     print(observation_probabilities)
 
     return initial_probabilities, transition_probabilities, observation_probabilities
-
-
-
-
-
-# def viterbi_algorithm(sentence, initial_probabilities, transition_probabilities, observation_probabilities):
-#     viterbi = []
-#     backpointer = []
-
-#     first_word = sentence[0]
-#     first_viterbi = {}
-#     first_backpointer = {}
-
-#     # for tag in initial_probabilities:
-#     #     if tag in observation_probabilities and first_word in observation_probabilities[tag]:
-#     #         first_viterbi[tag] = initial_probabilities[tag] * observation_probabilities[tag][first_word]
-#     #     else:
-#     #         first_viterbi[tag] = 0
-#     #     first_backpointer[tag] = None
-
-#     max_prob = 0
-#     best_starting_tag = None
-
-#     for tag in initial_probabilities:
-#         first_viterbi[tag] = 0
-#         first_backpointer[tag] = None
-#         if tag in observation_probabilities and first_word in observation_probabilities[tag]:
-#             prob = initial_probabilities[tag] * observation_probabilities[tag][first_word]
-#             if prob > max_prob:
-#                 max_prob = prob
-#                 best_starting_tag = tag
-
-#     first_viterbi[best_starting_tag] = max_prob
-#     first_backpointer[best_starting_tag] = None
-
-
-
-#     viterbi.append(first_viterbi)
-#     backpointer.append(first_backpointer)
-
-#     for word_index in range(1, len(sentence)):
-#         current_viterbi = {}
-#         current_backpointer = {}
-#         prev_viterbi = viterbi[-1]
-
-#         for current_tag in initial_probabilities:
-#             max_prob = 0
-#             best_previous_tag = None
-
-#             for previous_tag in initial_probabilities:
-#                 if previous_tag in transition_probabilities and current_tag in transition_probabilities[previous_tag]:
-#                     transition_prob = transition_probabilities[previous_tag][current_tag]
-#                 else:
-#                     transition_prob = 0
-
-#                 if current_tag in observation_probabilities and sentence[word_index] in observation_probabilities[current_tag]:
-#                     observation_prob = observation_probabilities[current_tag][sentence[word_index]]
-#                 else:
-#                     observation_prob = 0
-
-#                 prob = prev_viterbi[previous_tag] * transition_prob * observation_prob
-
-#                 if prob > max_prob:
-#                     max_prob = prob
-#                     best_previous_tag = previous_tag
-
-#             current_viterbi[current_tag] = max_prob
-#             current_backpointer[current_tag] = best_previous_tag
-
-#         viterbi.append(current_viterbi)
-#         backpointer.append(current_backpointer)
-
-#     best_final_tag = max(viterbi[-1], key=viterbi[-1].get)
-#     best_path = [best_final_tag]
-
-#     for bp in reversed(backpointer[1:]):
-#         best_previous_tag = bp[best_final_tag]
-#         if best_previous_tag:
-#             best_path.insert(0, best_previous_tag)
-#             best_final_tag = best_previous_tag
-
-#     return list(zip(sentence, best_path))
-
-
-
 
 
 # def viterbi_algorithm_V2(sentence, initial_probabilities, transition_probabilities, observation_probabilities):
@@ -470,6 +388,20 @@ if __name__ == '__main__':
     # get our probability tables - build HMM
     initial_pr, transition_pr, observation_pr = generate_tables_V2(training_sentences)
 
+    print("Here are the initial probabilities:")
+    print(initial_pr)
+    print(" ")
+
+    print("here are the transitional probabilities, 3 random rows of it:")
+    print(transition_pr[0])
+    print(transition_pr[4])
+    print(transition_pr[20])
+    print(" ")
+
+    # print("here are the observational probabilities:")
+    # print(observation_pr)
+    # print(" ")
+
 
     tagged_sentences = []
 
@@ -477,8 +409,8 @@ if __name__ == '__main__':
         tagged_sentence = viterbi_algorithm_V2(sentence, initial_pr, transition_pr, observation_pr)
         tagged_sentences.append(tagged_sentence)
 
-    print(tagged_sentences)
-
+    #print(tagged_sentences)
+    print("tagging sentences and writing up the output file now.")
     with open(args.outputfile, 'w') as output_file:
         for tagged_sentence in tagged_sentences:
             for word, tag in tagged_sentence:
