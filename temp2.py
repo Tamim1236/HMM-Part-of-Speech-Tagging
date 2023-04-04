@@ -129,9 +129,12 @@ def generate_tables_V2(sentences):
     # Normalize the initital probabilities
     initial_probabilities /= num_sentences  
 
+    # have this smoothing constant to avoid dividing by zero in the transition probability normalization
+    smoothing_constant = 1e-10
+
     # Normalize the transition probabilities - each row has P(next tag | curr tag) - normalize by dividing each by tag_counts(curr_tag)
     for i in range(len(transition_probabilities)):
-        transition_probabilities[i] /= tag_counts[i]
+        transition_probabilities[i] = (transition_probabilities[i] + smoothing_constant)/ tag_counts[i]
 
     # Normalize the observation probabilities
     for i in range(len(observation_probabilities)):
