@@ -16,7 +16,6 @@ TAGS = ["AJ0", "AJC", "AJS", "AT0", "AV0", "AVP", "AVQ", "CJC", "CJS", "CJT", "C
         'CJS-AVQ', 'PRP-CJS', 'DT0-CJT', 'PNI-CRD', 'NP0-NN1', 'VVB-NN1', 'VVG-NN1', 'VVZ-NN2', 'VVN-VVD']
 
 
-
 # !note: what is we have the end of a speech, like "Can you tell me how much this costs?" - here the end of the sentence should be the  "  at the end 
 def get_sentences(training_list):
     
@@ -34,29 +33,12 @@ def get_sentences(training_list):
                 sentence.append((word, tag))
                 
                 # check whether the word is an ending punctuation
-                if re.search(r'[.!?]', word):
+                if re.search(r'[!?.]', word):
                     sentences.append(sentence)
                     sentence = [] #reset current sentence
     
-    #print(f"here is how many sentences we have in the text: {len(sentences)}")
-
     return sentences
 
-# def get_test_sentences(test_file):
-#     sentences = []
-#     sentence = []
-
-#     with open(test_file, 'r') as f:
-#         for line in f:
-#             line = line.strip()
-#             if not line or re.search(r'[.!?]', line):
-#                 if sentence:
-#                     sentences.append(sentence)
-#                     sentence = []
-#             else:
-#                 sentence.append(line)
-
-#     return sentences
 
 def get_test_sentences(test_file):
     sentences = []
@@ -73,81 +55,11 @@ def get_test_sentences(test_file):
             words = line.split()
             for word in words:
                 sentence.append(word)
-                if re.search(r'[.!?]', word):
+                if re.search(r'[.?!]', word):
                     sentences.append(sentence)
                     sentence = []
 
     return sentences
-
-
-# def generate_tables(sentences):
-#     initial_probabilities = {}
-#     num_sentences = len(sentences)
-
-#     transition_probabilities = {}
-#     observation_probabilities = {}
-#     tag_counts = {}
-
-#     for sentence in sentences:
-
-#         # procedure for initial_probabilities
-#         initial_tag = sentence[0][1]
-#         if initial_tag in initial_probabilities:
-#             initial_probabilities[initial_tag] += 1
-#         else:
-#             initial_probabilities[initial_tag] = 1
-
-#         for i in range(len(sentence)):
-#             word, tag = sentence[i]
-
-#             if tag in tag_counts:
-#                 tag_counts[tag] += 1
-#             else:
-#                 tag_counts[tag] = 1
-
-#             # Update observation_probabilities
-#             if tag not in observation_probabilities:
-#                 observation_probabilities[tag] = {}
-#             observation_probabilities[tag][word] = observation_probabilities[tag].get(word, 0) + 1
-
-#             if i < len(sentence) - 1:
-#                 next_tag = sentence[i + 1][1]
-
-#                 # Update transition_probabilities
-#                 if tag not in transition_probabilities:
-#                     transition_probabilities[tag] = {}
-#                 transition_probabilities[tag][next_tag] = transition_probabilities[tag].get(next_tag, 0) + 1
-
-#     # now normalize initial probability values using num_sentences
-#     for tag in initial_probabilities:
-#         initial_probabilities[tag] /= num_sentences
-
-#     # Update transition probabilities
-#     for current_tag in transition_probabilities:
-#         total_transitions = sum(transition_probabilities[current_tag].values())
-        
-#         for next_tag in transition_probabilities[current_tag]:
-#             transition_probabilities[current_tag][next_tag] /= total_transitions
-
-#     # Update observation probabilities
-#     for tag in observation_probabilities:
-#         total_observations = sum(observation_probabilities[tag].values())
-        
-#         for word in observation_probabilities[tag]:
-#             observation_probabilities[tag][word] /= total_observations
-
-#     # print("here are the initial probs:")
-#     # print(initial_probabilities)
-#     # print(f"All the probabilities in initial_probabilities sum up to {sum(initial_probabilities.values())}")
-
-#     # print("here are the transition probs:")
-#     # print(transition_probabilities)
-
-#     # print("here are the observation probs:")
-#     # print(observation_probabilities)
-
-#     return initial_probabilities, transition_probabilities, observation_probabilities
-
 
 
 def generate_tables_V2(sentences):
@@ -158,20 +70,7 @@ def generate_tables_V2(sentences):
     transition_probabilities = np.zeros((91,91), dtype=float) # 91x91 matrix
     observation_probabilities = [{} for i in range(91)] # creating an empty list where each row is an empty dictionary (for the words)
 
-    #print(observation_probabilities)
-
-
     tag_counts = np.zeros(91, dtype=int) # 1x91 matrix to keep track of how many times tags appeared across all sentences
-
-    
-    # print(initial_probabilities)
-    # print(f"here is the size of initial_probabilities: {initial_probabilities.shape}")
-    # print()
-    # print()
-    # print(transition_probabilities)
-    # print(f"here is the size of transition_probabilities: {transition_probabilities.shape}")
-
-    #print(sentences)
 
     for sentence in sentences:
         num_sentences += 1
@@ -204,13 +103,13 @@ def generate_tables_V2(sentences):
 
                 transition_probabilities[curr_tag_i][next_tag_i] += 1
 
-
-
     # print("here are the transition counts[0] before normalizing:")
     # print(transition_probabilities[0])
     # print(" ")
 
     # have this smoothing constant to avoid dividing by zero in the transition probability normalization
+    # this way if we make a wrong prediction, say AV0, and then we are trying to get probability of AV0
+    # from initial, or probability of AV0->X from transition, even if those were initially zero, we can account for it
     smoothing_constant = 1e-10
 
     # Normalize the initital probabilities
@@ -245,103 +144,77 @@ def generate_tables_V2(sentences):
     print("here are the observational probabilities:")
     print(observation_probabilities)
 
-    return initial_probabilities, transition_probabilities, observation_probabilities
+    return initial_probabilities, transition_probabilities, observation_probabilities, tag_counts
 
 
-# def viterbi_algorithm_V2(sentence, initial_probabilities, transition_probabilities, observation_probabilities):
+def viterbi_algorithm_V2(sentence, initial_probabilities, transition_probabilities, observation_probabilities, tag_counts):
     
-#     num_tags = len(TAGS) # total number of tags
-    
-#     viterbi = np.zeros((num_tags, len(sentence)))
-#     backpointer = np.zeros((num_tags, len(sentence)), dtype=int)
+    num_states = len(initial_probabilities)
+    num_observations = len(sentence)
 
-#     # Initialize 2st col of Viterbi table
-#     for i in range(num_tags):
-#         if sentence[0].lower() in observation_probabilities[i]:
-#             viterbi[i, 0] = initial_probabilities[i] * observation_probabilities[i][sentence[0].lower()]
+    # initialize the prob and prev matrices
+    prob = np.zeros((num_observations, num_states)) # size = num words x 91
+    prev = np.zeros((num_observations, num_states), dtype=int) # size = num words x 91
 
-#     # Add to Viterbi table
-#     for word_index in range(1, len(sentence)):
-#         for curr_tag_index in range(num_tags):
-            
-#             max_prob = 0
-#             best_previous_tag_index = 0
-
-#             for prev_tag_index in range(num_tags):
-#                 prob = (viterbi[prev_tag_index, word_index - 1]) * (transition_probabilities[prev_tag_index, curr_tag_index])
-                
-#                 if sentence[word_index].lower() in observation_probabilities[curr_tag_index]:
-#                     prob *= observation_probabilities[curr_tag_index][sentence[word_index].lower()]
-
-#                 if prob > max_prob:
-#                     max_prob = prob
-#                     best_previous_tag_index = prev_tag_index
-
-#             viterbi[curr_tag_index, word_index] = max_prob
-#             backpointer[curr_tag_index, word_index] = best_previous_tag_index
-
-#     # Traceback of our best path
-#     best_final_tag_index = np.argmax(viterbi[:, -1])
-#     best_path = [TAGS[best_final_tag_index]]
-
-#     for word_index in reversed(range(1, len(sentence))):
+    # Go through all tags - Get values at time t=0 for first word
+    first_word = sentence[0].lower()
+    for i in range(num_states):
+        if first_word in observation_probabilities[i]:
+            prob[0, i] = initial_probabilities[i] * observation_probabilities[i][first_word]
         
-#         best_previous_tag_index = backpointer[best_final_tag_index, word_index]
-#         best_final_tag_index = best_previous_tag_index
-#         best_path.insert(0, TAGS[best_previous_tag_index])
-
-#     return list(zip(sentence, best_path))
-
-
-def viterbi_algorithm_V2(sentence, initial_probabilities, transition_probabilities, observation_probabilities):
-    n_states = len(initial_probabilities)
-    n_observations = len(sentence)
-
-    prob = np.zeros((n_observations, n_states))
-    prev = np.zeros((n_observations, n_states), dtype=int)
-
-    # Determine values for time step 0
-    for i in range(n_states):
-        if sentence[0].lower() in observation_probabilities[i]:
-            prob[0, i] = initial_probabilities[i] * observation_probabilities[i][sentence[0].lower()]
-        elif re.search(r'[,.!?]', sentence[0]):  # Ensuring punctuation is tagged as 'PUN'
+        # Specifically for the case when we have punctuation => always predict 'PUN'
+        # so this is if the first word wasnt observed, but it is punctuation => we are certain it is PUN
+        elif re.search(r'[,.!?]', first_word):
+            # if its punctuation, then the prob for PUN=1 (guaranteed) and rest remain zero (initialized in np.zeros())
             if TAGS[i] == 'PUN':
                 prob[0, i] = 1.0
+        
+        # !!!what if this first word is one we haven't seen before? Shouldnt just be leaving it as zero
+        
+        # no previous since this is the first tag
         prev[0, i] = -1
 
-    # For time steps 1 to length(sentence)-1, find each current state's most likely prior state x
-    for t in range(1, n_observations):
-        for i in range(n_states):
-            if sentence[t].lower() in observation_probabilities[i]:
-                obs_prob = observation_probabilities[i][sentence[t].lower()]
-            elif re.search(r'[,.!?]', sentence[t]):  # Ensuring punctuation is tagged as 'PUN'
-                if TAGS[i] == 'PUN':
-                    obs_prob = 1.0
-                else:
-                    obs_prob = 0.0
-            else:
-                obs_prob = 0.0
+    # Recursive step from t=1 to t=len(sentence)-1
+    for t in range(1, num_observations):
+        for i in range(num_states):
+            
+            curr_word = sentence[t].lower()
 
-            temp_probs = prob[t - 1] * transition_probabilities[:, i] * obs_prob
+            if curr_word in observation_probabilities[i]:
+                observation_prob = observation_probabilities[i][curr_word]
+            
+            # Specifically for the case when we have punctuation => always predict 'PUN'
+            elif re.search(r'[,.!?]', curr_word):
+                if TAGS[i] == 'PUN':
+                    observation_prob = 1.0
+                else:
+                    observation_prob = 0.0
+            
+            # this is the case where we encounter a word we havent seen before:
+            else:
+                #observation_prob = 0.0 #change this?
+                smoothing_k = 1e-3
+                observation_prob = smoothing_k / (tag_counts[i] + smoothing_k * (len(observation_probabilities[i]) + 1)) # Laplace smoothing
+
+            temp_probs = prob[t - 1] * transition_probabilities[:, i] * observation_prob
             x = np.argmax(temp_probs)
             prob[t, i] = temp_probs[x]
             prev[t, i] = x
 
-    # Reconstruct the most likely state sequence
-    best_path = [np.argmax(prob[-1])]
-    for t in range(n_observations - 1, 0, -1):
+    # Get index for tag with highest prob for final word
+    best_i_last_word = np.argmax(prob[-1])
+    # Store this index into the best_path list
+    best_path = [best_i_last_word]
+
+    for t in range(num_observations - 1, 0, -1):
         best_path.append(prev[t, best_path[-1]])
 
+    # to get path from start->end
     best_path.reverse()
-    best_path = [TAGS[i] for i in best_path]
+    best_path = [TAGS[i] for i in best_path] # convert indices to their respective tags
 
+    # return list of (word,tag) tuples
     return list(zip(sentence, best_path))
-
-
-
-
-
-
 
 
 
@@ -386,7 +259,7 @@ if __name__ == '__main__':
     testing_sentences = get_test_sentences(args.testfile)
 
     # get our probability tables - build HMM
-    initial_pr, transition_pr, observation_pr = generate_tables_V2(training_sentences)
+    initial_pr, transition_pr, observation_pr, tag_counts = generate_tables_V2(training_sentences)
 
     print("Here are the initial probabilities:")
     print(initial_pr)
@@ -405,8 +278,9 @@ if __name__ == '__main__':
 
     tagged_sentences = []
 
+    # run veterbi for each sentence and add tagged sentence to list
     for sentence in testing_sentences:
-        tagged_sentence = viterbi_algorithm_V2(sentence, initial_pr, transition_pr, observation_pr)
+        tagged_sentence = viterbi_algorithm_V2(sentence, initial_pr, transition_pr, observation_pr, tag_counts)
         tagged_sentences.append(tagged_sentence)
 
     #print(tagged_sentences)
@@ -415,23 +289,3 @@ if __name__ == '__main__':
         for tagged_sentence in tagged_sentences:
             for word, tag in tagged_sentence:
                 output_file.write(f"{word} : {tag}\n")
-
-
-
-    #print(testing_sentences)
-
-
-    # tagged_sentences = []
-    # for sentence in testing_sentences:
-    #     tagged_sentence = viterbi_algorithm(sentence, initial_pr, transitional_pr, observational_pr)
-    #     tagged_sentences.append(tagged_sentence)
-
-    
-    #print(tagged_sentences)
-
-
-
-    #print(sentences)
-
-    # generate_tables(training_list)
-
