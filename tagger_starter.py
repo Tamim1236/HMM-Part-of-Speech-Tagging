@@ -169,6 +169,44 @@ def viterbi_algorithm_V2(sentence, initial_probabilities, transition_probabiliti
             if TAGS[i] == 'PUN':
                 prob[0, i] = 1.0
         
+        # double-quotations are always "PUQ"
+        elif re.search(r'["]', first_word):
+            # if its punctuation, then the prob for PUN=1 (guaranteed) and rest remain zero (initialized in np.zeros())
+            if TAGS[i] == 'PUQ':
+                prob[0, i] = 1.0
+        
+        # pronouns are "PNP"
+        elif first_word in ['he', 'she', 'him', 'her', 'they', 'them', 'me', 'you', 'we', 'it', 'I']:
+            if TAGS[i] == 'PNP':
+                prob[0, i] = 1.0
+        
+        # reflexive pronouns are "PNX"
+        elif first_word in ['myself', 'yourself', 'himself', 'herself', 'oneself', 'itself', 'ourself', 'ourselves']:
+            if TAGS[i] == 'PNX':
+                prob[0, i] = 1.0
+
+        # wh-pronoun are "PNQ"
+        elif first_word in ['who', 'whom', 'whoever', 'whomever']:
+            if TAGS[i] == 'PNQ':
+                prob[0, i] = 1.0
+            
+        # prepositions are "PRP"
+        elif first_word in ['at', 'in', 'with', 'for']:
+            if TAGS[i] == 'PRP':
+                prob[0, i] = 1.0
+        
+        # article is "AT0"
+        elif first_word in ['a', 'the', 'an']:
+            if TAGS[i] == 'AT0':
+                prob[0, i] = 1.0
+        
+        # Coordinating conjunctions are "CJC"
+        elif first_word in ['and', 'or', 'but', 'nor']:
+            if TAGS[i] == 'CJC':
+                prob[0, i] = 1.0        
+
+
+        
         # !!!what if this first word is one we haven't seen before? Shouldnt just be leaving it as zero
         
         # no previous since this is the first tag
@@ -190,6 +228,55 @@ def viterbi_algorithm_V2(sentence, initial_probabilities, transition_probabiliti
                 else:
                     observation_prob = 0.0
             
+            # double-quotations are guaranteed to be PUQ
+            elif re.search(r'["]', curr_word):
+                if TAGS[i] == 'PUQ':
+                    observation_prob = 1.0
+                else:
+                    observation_prob = 0.0
+
+            # pronouns are guaranteed to be PNP
+            elif curr_word in ['he', 'she', 'him', 'her', 'they', 'them', 'me', 'you', 'we', 'it', 'I']:
+                if TAGS[i] == 'PNP':
+                    observation_prob = 1.0
+                else:
+                    observation_prob = 0.0
+            
+            # reflexive pronouns are guaranteed to be PNX
+            elif curr_word in ['myself', 'yourself', 'himself', 'herself', 'oneself', 'itself', 'ourself', 'ourselves']:
+                if TAGS[i] == 'PNX':
+                    observation_prob = 1.0
+                else:
+                    observation_prob = 0.0
+
+            # wh-pronouns are guaranteed to be PNQ
+            elif curr_word in ['who', 'whom', 'whoever', 'whomever']:
+                if TAGS[i] == 'PNQ':
+                    observation_prob = 1.0
+                else:
+                    observation_prob = 0.0
+
+            # prepositions are guaranteed to be PRP
+            elif curr_word in ['at', 'in', 'with', 'for']:
+                if TAGS[i] == 'PRP':
+                    observation_prob = 1.0
+                else:
+                    observation_prob = 0.0
+            
+            # articles are guaranteed to be AT0
+            elif curr_word in ['a', 'the', 'an']:
+                if TAGS[i] == 'AT0':
+                    observation_prob = 1.0
+                else:
+                    observation_prob = 0.0
+
+            # Coordinating conjunctions are guaranteed to be CJC
+            elif curr_word in ['and', 'or', 'but', 'nor']:
+                if TAGS[i] == 'CJC':
+                    observation_prob = 1.0
+                else:
+                    observation_prob = 0.0
+
             # this is the case where we encounter a word we havent seen before:
             else:
                 #observation_prob = 0.0 #change this?
