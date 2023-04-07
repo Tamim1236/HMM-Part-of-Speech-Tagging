@@ -40,6 +40,7 @@ def get_sentences(training_list):
     return sentences
 
 
+# function to get sentences from testing file - similar to training
 def get_test_sentences(test_file):
     sentences = []
     sentence = []
@@ -53,8 +54,10 @@ def get_test_sentences(test_file):
                 continue
             
             words = line.split()
+            
             for word in words:
                 sentence.append(word)
+            
                 if re.search(r'[.?!]', word):
                     sentences.append(sentence)
                     sentence = []
@@ -141,8 +144,8 @@ def generate_tables_V2(sentences):
     # print(transition_probabilities[0])
     # print(transition_probabilities[20])
     
-    print("here are the observational probabilities:")
-    print(observation_probabilities)
+    # print("here are the observational probabilities:")
+    # print(observation_probabilities)
 
     return initial_probabilities, transition_probabilities, observation_probabilities, tag_counts
 
@@ -278,13 +281,17 @@ def viterbi_algorithm_V2(sentence, initial_probabilities, transition_probabiliti
                     observation_prob = 0.0
 
             # this is the case where we encounter a word we havent seen before:
-            else:
+            else: 
                 #observation_prob = 0.0 #change this?
-                smoothing_k = 1e-3
+                # smoothing_k = 1e-3
+                # smoothing_k = 1e-5
+                # smoothing_k = 1e-10
+                smoothing_k = 1e-12
                 observation_prob = smoothing_k / (tag_counts[i] + smoothing_k * (len(observation_probabilities[i]) + 1)) # Laplace smoothing
 
             temp_probs = prob[t - 1] * transition_probabilities[:, i] * observation_prob
             x = np.argmax(temp_probs)
+            
             prob[t, i] = temp_probs[x]
             prev[t, i] = x
 
@@ -339,7 +346,7 @@ if __name__ == '__main__':
 
     print("Starting the tagging process.")
 
-    print("here is the training list:")
+    # print("here is the training list:")
     #print(training_list)
 
     training_sentences = get_sentences(training_list)
@@ -348,15 +355,15 @@ if __name__ == '__main__':
     # get our probability tables - build HMM
     initial_pr, transition_pr, observation_pr, tag_counts = generate_tables_V2(training_sentences)
 
-    print("Here are the initial probabilities:")
-    print(initial_pr)
-    print(" ")
+    # print("Here are the initial probabilities:")
+    # print(initial_pr)
+    # print(" ")
 
-    print("here are the transitional probabilities, 3 random rows of it:")
-    print(transition_pr[0])
-    print(transition_pr[4])
-    print(transition_pr[20])
-    print(" ")
+    # print("here are the transitional probabilities, 3 random rows of it:")
+    # print(transition_pr[0])
+    # print(transition_pr[4])
+    # print(transition_pr[20])
+    # print(" ")
 
     # print("here are the observational probabilities:")
     # print(observation_pr)
